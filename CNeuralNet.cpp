@@ -58,7 +58,7 @@ CNeuralNet::CNeuralNet(int NumInputs,
 
 
 	CreateNet();
-
+	InitializeNetwork();
 }
 
 
@@ -75,12 +75,11 @@ void CNeuralNet::CreateNet()
 		//create first hidden layer
 	  m_vecLayers.push_back(SNeuronLayer(m_iNeuronsPerHiddenLyr, m_iNumInputs));
     
-    for (int i=0; i<m_iNumHiddenLayers-1; i++)
-    {
+      for (int i=0; i<m_iNumHiddenLayers-1; i++)
+       {
 
-			m_vecLayers.push_back(SNeuronLayer(m_iNeuronsPerHiddenLyr,
-                                         m_iNeuronsPerHiddenLyr));
-    }
+			m_vecLayers.push_back(SNeuronLayer(m_iNeuronsPerHiddenLyr, m_iNeuronsPerHiddenLyr));
+       }
 
     //create output layer
 	  m_vecLayers.push_back(SNeuronLayer(m_iNumOutputs, m_iNeuronsPerHiddenLyr));
@@ -116,206 +115,201 @@ void CNeuralNet::InitializeNetwork()
 //	given an input vector this function calculates the output vector
 //
 //------------------------------------------------------------------------
-vector<double> CNeuralNet::Update(vector< double> inputs)
+
+vector<double> CNeuralNet::Update(vector<double> inputs)
 {
 	//stores the resultant outputs from each layer
 	vector<double> outputs;
-	outputs.clear();
-	for (int k=0;k<inputs.size();k++)
-	{
-		inputs[k]+=RandFloat()*MAX_NOISE_TO_ADD;
-	}
+
 	int cWeight = 0;
-	
+
 	//first check that we have the correct amount of inputs
 	if (inputs.size() != m_iNumInputs)
-  {
+	{
 		//just return an empty vector if incorrect.
 		return outputs;
-  }
-	
-	//For each layer....
-	for (int i=0; i<m_iNumHiddenLayers + 1; i++)
+	}
+
+	//For each layer...
+	for (int i=0; i<m_iNumHiddenLayers + 1; ++i)
 	{
+
 		if ( i > 0 )
-    {
+		{
 			inputs = outputs;
-    }
+		}
 
 		outputs.clear();
-		
+
 		cWeight = 0;
 
 		//for each neuron sum the (inputs * corresponding weights).Throw 
 		//the total at our sigmoid function to get the output.
-		for (int j=0; j<m_vecLayers[i].m_iNumNeurons; j++)
+		for (int n=0; n<m_vecLayers[i].m_iNumNeurons; ++n)
 		{
-
 			double netinput = 0.0f;
 
-			int	NumInputs = m_vecLayers[i].m_vecNeurons[j].m_iNumInputs;
-			
+			int	NumInputs = m_vecLayers[i].m_vecNeurons[n].m_iNumInputs;
+
 			//for each weight
-			for (int k=0; k<NumInputs - 1; k++)
+			for (int k=0; k<NumInputs - 1; ++k)
 			{
 				//sum the weights x inputs
-				netinput += m_vecLayers[i].m_vecNeurons[j].m_vecWeight[k] * 
-                    inputs[cWeight++];
+				netinput += m_vecLayers[i].m_vecNeurons[n].m_vecWeight[k] * 
+					inputs[cWeight++];
 			}
 
 			//add in the bias
-			netinput += m_vecLayers[i].m_vecNeurons[j].m_vecWeight[NumInputs-1] * 
-                  CParams::dBias;
+			netinput += m_vecLayers[i].m_vecNeurons[n].m_vecWeight[NumInputs-1] * 
+				BIAS;
 
-			m_vecLayers[i].m_vecNeurons[j].m_dActivation=Sigmoid(netinput,CParams::dActivationResponse);
-			
-			outputs.push_back(m_vecLayers[i].m_vecNeurons[j].m_dActivation);
+
+			//The combined activation is first filtered through the sigmoid 
+			//function and a record is kept for each neuron 
+			m_vecLayers[i].m_vecNeurons[n].m_dActivation = 
+				Sigmoid(netinput, ACTIVATION_RESPONSE);
+
+			//store the outputs from each layer as we generate them.
+			outputs.push_back(m_vecLayers[i].m_vecNeurons[n].m_dActivation);
 
 			cWeight = 0;
 		}
 	}
-	inputs.clear();
+
 	return outputs;
 }
 
-bool CNeuralNet::NetworkTrainingEpoch(vector<vector<MyNum> > &SetIn, vector<vector<iovector> > &SetOut)
+bool CNeuralNet::NetworkTrainingEpoch(vector<iovector> &SetIn,
+                                      vector<iovector> &SetOut)
 {
-	vector<double> input;
-	double sumi=0;
-	//int fr=RandInt(5,SetIn.size()-1);
-	//int vec=RandInt(3,SetIn[0].size()-10);
+  //create some iterators
+  vector<double>::iterator  curWeight;
+  vector<SNeuron>::iterator curNrnOut, curNrnHid;
+
+  double WeightUpdate = 0;
+
+  //this will hold the cumulative error value for the training set
+  m_dErrorSum = 0;
+
+  //run each input pattern through the network, calculate the errors and update
+  //the weights accordingly
+  for (int vec=0; vec<SetIn.size(); ++vec)
+  {
+    //first run this input vector through the network and retrieve the outputs
+    vector<double> outputs = Update(SetIn[vec]);
+
+    //return if error has occurred
+    if (outputs.size() == 0)
+    {
+      return false;
+    }
+
+    //for each output neuron calculate the error and adjust weights
+    //accordingly
+    for (int op=0; op<m_iNumOutputs; ++op)
+    {
+      //first calculate the error value
+      double err = (SetOut[vec][op] - outputs[op]) * outputs[op]
+                   * (1 - outputs[op]);
+
+      //update the error total. (when this value becomes lower than a
+      //preset threshold we know the training is successful)
+      m_dErrorSum += (SetOut[vec][op] - outputs[op]) *
+                     (SetOut[vec][op] - outputs[op]);      
+
+      //keep a record of the error value
+      m_vecLayers[1].m_vecNeurons[op].m_dError = err;
+
+      curWeight = m_vecLayers[1].m_vecNeurons[op].m_vecWeight.begin();
+      curNrnHid = m_vecLayers[0].m_vecNeurons.begin();
+
+      int w = 0;
+
+      //for each weight up to but not including the bias
+      while(curWeight != m_vecLayers[1].m_vecNeurons[op].m_vecWeight.end()-1)
+      {
+        //calculate weight update
+        WeightUpdate = err * m_dLearningRate * curNrnHid->m_dActivation;
+        
+        //calculate the new weight based on the backprop rules and adding in momentum
+        *curWeight += WeightUpdate + m_vecLayers[1].m_vecNeurons[op].m_vecPrevUpdate[w] * MOMENTUM;
+
+        //keep a record of this weight update
+        m_vecLayers[1].m_vecNeurons[op].m_vecPrevUpdate[w] = WeightUpdate;
+
+        ++curWeight; ++curNrnHid; ++w;
+      }
+
+      //and the bias for this neuron
+      WeightUpdate = err * m_dLearningRate * BIAS;
+
+      *curWeight += WeightUpdate + m_vecLayers[1].m_vecNeurons[op].m_vecPrevUpdate[w] * MOMENTUM;  
+
+      //keep a record of this weight update
+      m_vecLayers[1].m_vecNeurons[op].m_vecPrevUpdate[w] = WeightUpdate;
+      
+      
+    }
+
+   //**moving backwards to the hidden layer**
+    curNrnHid = m_vecLayers[0].m_vecNeurons.begin();
+
+    int n = 0;
     
-	//for (int fr=0;fr<SetIn.size();fr++)
-   // {
-	// int fr=RandInt(3,SetIn.size());
-	//for (int vec=0;vec<SetIn[fr].size();vec++)
-	//{   
-	  //int wh=5;
+    //for each neuron in the hidden layer calculate the error signal
+    //and then adjust the weights accordingly
+    while(curNrnHid != m_vecLayers[0].m_vecNeurons.end())
+    {
+      double err = 0;
 
-	  int fr=RandInt(2,SetIn.size()-1);
-	  int vec=RandInt(3,SetIn[0].size()-10);
-	 
-	// while (wh)
-  // {
-		vector< double>::iterator curWeight;
-		vector<SNeuron>::iterator curNrnOut,curNrnHid;
-		for (int i=0;i<9;i++)
-		{
-			
-			   input.push_back(SetIn[fr][vec].VecNum[i]);
-		    
-		}
+      curNrnOut = m_vecLayers[1].m_vecNeurons.begin();
 
-		for (int i=0;i<input.size();i++)
-		{
-			sumi+=abs(input[i]);
-		}
+      //to calculate the error for this neuron we need to iterate through
+      //all the neurons in the output layer it is connected to and sum
+      //the error * weights
+      while(curNrnOut != m_vecLayers[1].m_vecNeurons.end())
+      {
+        err += curNrnOut->m_dError * curNrnOut->m_vecWeight[n];
 
-		if (sumi==0)
-		{
-			return true;
-		}
+        ++curNrnOut;
+      }
 
-		double WeightUpdate=0;
-		m_dErrorSum=0;
+      //now we can calculate the error
+      err *= curNrnHid->m_dActivation * (1 - curNrnHid->m_dActivation);     
+      
+      //for each weight in this neuron calculate the new weight based
+      //on the error signal and the learning rate
+      for (int w=0; w<m_iNumInputs; ++w)
+      {
+        WeightUpdate = err * m_dLearningRate * SetIn[vec][w];
 
-		vector<double> outputs=Update(input);
+        //calculate the new weight based on the backprop rules and adding in momentum
+        curNrnHid->m_vecWeight[w] += WeightUpdate + curNrnHid->m_vecPrevUpdate[w] * MOMENTUM;
+        
+        //keep a record of this weight update
+        curNrnHid->m_vecPrevUpdate[w] = WeightUpdate;
 
-		if(outputs.size()==0) return false;
+      }
 
-		for (int op=0;op<m_iNumOutputs;op++)
-		{
-			double err=(SetOut[fr][vec][op]-outputs[op])*outputs[op]*(1-outputs[op]);
-			
-			m_dErrorSum+=(SetOut[fr][vec][op]-outputs[op])*(SetOut[fr][vec][op]-outputs[op]);
-			
-			m_vecLayers[1].m_vecNeurons[op].m_dError=err;
-			
-			curWeight=m_vecLayers[1].m_vecNeurons[op].m_vecWeight.begin();
-			
-			curNrnHid=m_vecLayers[0].m_vecNeurons.begin();
+      //and the bias
+      WeightUpdate = err * m_dLearningRate * BIAS;
 
-			int w=0;
+      curNrnHid->m_vecWeight[m_iNumInputs] += WeightUpdate + curNrnHid->m_vecPrevUpdate[n] * MOMENTUM;
 
-			while (curWeight!=m_vecLayers[1].m_vecNeurons[op].m_vecWeight.end()-1)
-			{
-				WeightUpdate=err*m_dLearningRate*curNrnHid->m_dActivation;
-				
-				*curWeight+=WeightUpdate+m_vecLayers[1].m_vecNeurons[op].m_vecPrevUpdate[w]*MOMENTUM;
-				
-				m_vecLayers[1].m_vecNeurons[op].m_vecPrevUpdate[w]=WeightUpdate;
-				
-				++curWeight;
-				++curNrnHid;
-                ++w;
-			}
-			WeightUpdate = err * m_dLearningRate * CParams::dBias;
+      //keep a record of this weight update
+       curNrnHid->m_vecPrevUpdate[n] = WeightUpdate;
 
-			*curWeight += WeightUpdate + m_vecLayers[1].m_vecNeurons[op].m_vecPrevUpdate[w] * MOMENTUM;  
+      ++curNrnHid;
+      ++n;
+    }
 
-			m_vecLayers[1].m_vecNeurons[op].m_vecPrevUpdate[w] = WeightUpdate;
-		}
-
-		curNrnHid = m_vecLayers[0].m_vecNeurons.begin();
-
-		int n = 0;
-
-		while(curNrnHid != m_vecLayers[0].m_vecNeurons.end())
-		{
-			double err = 0;
-
-			curNrnOut = m_vecLayers[1].m_vecNeurons.begin();
-
-			
-			while(curNrnOut != m_vecLayers[1].m_vecNeurons.end())
-			{
-				err += curNrnOut->m_dError * curNrnOut->m_vecWeight[n];
-
-				++curNrnOut;
-			}
-
-			
-			err *= curNrnHid->m_dActivation * (1 - curNrnHid->m_dActivation);     
-
-			
-			for (int w=0; w<m_iNumInputs; w++)
-			{
-				WeightUpdate = err * m_dLearningRate * input[w];
-
-				curNrnHid->m_vecWeight[w] += WeightUpdate + curNrnHid->m_vecPrevUpdate[w] * MOMENTUM;
-
-			
-				curNrnHid->m_vecPrevUpdate[w] = WeightUpdate;
-
-			}
-
-			
-			WeightUpdate = err * m_dLearningRate * CParams::dBias;
-
-			curNrnHid->m_vecWeight[m_iNumInputs] += WeightUpdate + curNrnHid->m_vecPrevUpdate[m_iNumInputs] * MOMENTUM;
-			
-			curNrnHid->m_vecPrevUpdate[m_iNumInputs] = WeightUpdate;
-
-			++curNrnHid;
-			++n;
-		}
-
-		input.clear();
-		outputs.clear();
-	// }//内循环
-
-	//}//外循环
-	//	wh--;
-  // }
-	 return true;
+  }//next input vector
+  return true;
 }
 
-bool CNeuralNet::Train(CData* data)
+// unused
+bool CNeuralNet::Train(vector<vector<double>>SetIn,vector<vector<double>> SetOut)
 {
-	vector< vector<MyNum> >  SetIn =data->GetInputSet();
-	vector<vector<vector<double> > > SetOut=data->GetOutputSet();
-
-	InitializeNetwork();
 
 	while(m_dErrorSum>ERROR_THRESHOLD)
 	{
@@ -323,8 +317,7 @@ bool CNeuralNet::Train(CData* data)
 		{
 			return false;
 		}
-		++m_iNumEpochs;
-	  Sleep(30);
+      
 	}
 	m_bTrained=true;
 	return true;

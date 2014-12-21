@@ -425,13 +425,16 @@ namespace RVO {
 			obstacleNeighbors_[i] = std::make_pair(distSq, obstacle);
 		}
 	}
-
+	///////////////////
+	//change
 	void Agent::update()
 	{
-		velocity_ = newVelocity_;
+		velocity_ = prefVelocity_;
+		//velocity_ = newVelocity_;
 		position_ += velocity_ * sim_->timeStep_;
 	}
 
+	
 	bool linearProgram1(const std::vector<Line> &lines, size_t lineNo, float radius, const Vector2 &optVelocity, bool directionOpt, Vector2 &result)
 	{
 		const float dotProduct = lines[lineNo].point * lines[lineNo].direction;

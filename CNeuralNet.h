@@ -91,8 +91,7 @@ private:
 	//storage for each layer of neurons including the output layer
 	vector<SNeuronLayer>	m_vecLayers;
 
-	bool            NetworkTrainingEpoch(vector<vector<MyNum> >&SetIn,
-		vector<vector<iovector> > &SetOut);
+
 
 	void            CreateNet();
 
@@ -110,13 +109,14 @@ public:
 		double LearningRate);
 		
 	vector<double>	Update(vector<double> inputs);
-
-	bool            Train(CData* data);
+	bool            NetworkTrainingEpoch(vector<iovector> &SetIn,
+		vector<iovector> &SetOut);
+	bool            Train(vector<vector<double>>SetIn,vector<vector<double>> SetOut);
 
 	
 	bool            Trained(){return m_bTrained;}
 	double          Error() {return m_dErrorSum;}
-	int             Epoch(){return m_iNumEpochs;}
+
 
 
 	

@@ -191,19 +191,21 @@ namespace RVO {
 #pragma omp parallel for
 #endif
 		for (int i = 0; i < static_cast<int>(agents_.size()); ++i) {
-			agents_[i]->computeNeighbors();
-			agents_[i]->computeNewVelocity();
+			//agents_[i]->computeNeighbors();
+			//agents_[i]->computeNewVelocity();
 		}
 
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
+		//¸üÐÂ¿ØÖÆ
 		for (int i = 0; i < static_cast<int>(agents_.size()); ++i) {
 			agents_[i]->update();
 		}
 
 		globalTime_ += timeStep_;
 	}
+
 
 	size_t RVOSimulator::getAgentAgentNeighbor(size_t agentNo, size_t neighborNo) const
 	{

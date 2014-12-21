@@ -1,8 +1,17 @@
 #ifndef DATA_H
 #define DATA_H
-
 //turn off the warnings for the STL
 #pragma warning (disable : 4786)
+
+//------------------------------------------------------------------------
+//
+//	Name: CData.h
+//
+//  Author: Mat Buckland 2002
+//
+//  Desc: class to manipulate the gesture data for the RecognizeIt mouse
+//        gesture recognition code project
+//-------------------------------------------------------------------------
 
 #include <vector>
 #include <iomanip>
@@ -10,7 +19,6 @@
 
 #include "defines.h"
 #include "utils.h"
-#pragma once
 
 using namespace std;
 
@@ -24,59 +32,29 @@ class CData
 {
 private:
 
-	vector<SPoint> position; 
+	//these will contain the training set when created.
+	vector<vector<double> > m_SetIn;
+	vector<vector<double> > m_SetOut;
 
-	vector<SPoint> temp; 
-
-	vector<vector<SPoint> > framepoint;
-
-	vector<vector<vector<SVector2D> > > dimension; 
-
-
-	vector<MyNum> SetinVector;//
-
-	vector<vector<double> > Setintemp;//
-
-	vector<vector<SVector2D> > dimensionperframe;
-
-	vector<vector<MyNum> > SetinSum;//
-
-	vector<SVector2D> perframeunit;
-
-	vector<SVector2D> speedvector;
-
-	vector<vector<SVector2D> > speedvectorsum;
-
-	vector<vector<double> > Setoutmon;
-
-	vector<double> Setoutnorm;
-
-	vector<vector<vector<double> > > Setoutsum;
-
-	vector< vector<MyNum>  > m_SetIn;
-
-	vector<vector<vector<double> > > m_SetOut;
-
-
-	vector<string>          m_vecNames;
-
-
+	//the names of the gestures
+	vector< vector<double> >    m_Vecout;
+	//string  m_vecNames[30];
+	//the vectors which make up the gestures
 	vector<vector<double> > m_vecPatterns;
 
-
+	//number of patterns loaded into database
 	int            m_iNumPatterns;
 
-
+	//size of the pattern vector
 	int            m_iVectorSize;
 
-
+	//adds the predefined patterns and names to m_vecNames
+	//and m_vecPatterns
 	void           Init();
 
 
 public:
-	int frameid[50][2];
 
-	bool load;
 	CData(int NumStartPatterns,
 		int VectorSize)    :m_iNumPatterns(NumStartPatterns),
 		m_iVectorSize(VectorSize)
@@ -87,29 +65,22 @@ public:
 		CreateTrainingSetFromData();
 	}
 
-	string  PatternName(int val);
+	//returns the name of the pattern at val
+	vector<double>  PatternName(int val);
 
+	//this adds a new pattern and pattern name to the training data.
+	//In addition, the function automatically adds the correct amount
+	// of dirty versions of the pattern
+	bool    AddData(vector<double> &data, vector<double> New);
 
-	bool    AddData();
-
-
+	//this function creates a training set from the data defined as
+	//constants in CData.h. From each pattern several additional patterns
+	//are formed by adding random noise
 	void CreateTrainingSetFromData();
 
-	vector< vector<MyNum>  > GetInputSet() {return m_SetIn;}
+	vector<vector<double> > GetInputSet() {return m_SetIn;}
+	vector<vector<double> > GetOutputSet(){return m_SetOut;}
 
-	vector<vector<vector<double> > > GetOutputSet(){return m_SetOut;}
-
-	bool Loadtxt();
-
-	vector<vector<SPoint> > Getframepoint(){return framepoint;}
-
-	vector<SPoint> newpoint ; 
-
-	vector<SVector2D> newspvet;
-
-	vector<SVector2D>respvet;
-
-	int GetVectorSize(){return m_iVectorSize;}
 };
 
 #endif

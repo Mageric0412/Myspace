@@ -18,17 +18,16 @@
 //-----------------------------------------------
 
 //total number of built in patterns
+#define NUM_PATTERNS        13
 
-//how much the input data is perturbed 
-#define MAX_NOISE_TO_ADD    0.01
-
+#define NUM_VECOUT         4
 //how many vectors each pattern contains
-#define NUM_VECTORS         9
+#define NUM_VECTORS         6
 
 //output has to be above this value for the program
 //to agree on a pattern. Below this value and it
 //will try to guess the pattern
-#define MATCH_TOLERANCE     0.96
+#define MATCH_TOLERANCE     0.8
 
 
 
@@ -43,21 +42,14 @@
 
 //when the total error is below this value the 
 //backprop stops training
-#define ERROR_THRESHOLD     0.0002
+#define ERROR_THRESHOLD     0.05
 
-#define NUM_HIDDEN_NEURONS  18
+#define NUM_HIDDEN_NEURONS  13
 
-#define MOMENTUM            0.8
+#define MOMENTUM            0.9
 
+  
 
-#define Lu 28
-#define Up 24
-#define Ru 20
-#define Le 21
-#define Ri 15
-#define Ld 14
-#define Dn 12
-#define Rd 10
 
 
 

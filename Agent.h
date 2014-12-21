@@ -108,6 +108,7 @@ namespace RVO {
 		 *             velocity of this agent.
 		 */
 		void update();
+		void update(Vector2 vec);
 
 		std::vector<std::pair<float, const Agent *> > agentNeighbors_;
 		size_t maxNeighbors_;
